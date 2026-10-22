@@ -1,11 +1,14 @@
 #include "test_edition_funcs.h"
 #include "../../edition/funcs.h"
+#include "../../edition/voxel_tool_lod_terrain.h"
 #include "../../edition/voxel_tool_terrain.h"
 #include "../../generators/graph/voxel_generator_graph.h"
+#include "../../generators/simple/voxel_generator_flat.h"
 #include "../../meshers/blocky/voxel_blocky_library.h"
 #include "../../meshers/blocky/voxel_blocky_model_cube.h"
 #include "../../meshers/blocky/voxel_blocky_model_mesh.h"
 #include "../../storage/voxel_data.h"
+#include "../../terrain/variable_lod/voxel_lod_terrain.h"
 #include "../../util/godot/classes/image.h"
 #include "../../util/testing/test_macros.h"
 #include "test_util.h"
@@ -364,6 +367,61 @@ void test_sdf_hemisphere() {
 	ZN_TEST_ASSERT(shape(Vector3f(0, 0.5, 0)) > 0);
 	ZN_TEST_ASSERT(shape(Vector3f(0, -0.5, 0)) < 0);
 	ZN_TEST_ASSERT(shape(Vector3f(2, 0, 0)) > 0);
+}
+
+namespace {
+
+StdVector<uint16_t> sdf_after_sphere(Vector3i origin, Vector3 offset, float radius, bool at_voxel) {
+	Ref<VoxelGeneratorFlat> generator;
+	generator.instantiate();
+	generator->set_height(origin.y + 0.5f);
+
+	VoxelLodTerrain *terrain = memnew(VoxelLodTerrain);
+	VoxelData &data = terrain->get_storage();
+	data.set_generator(generator);
+	const Box3i read_box(origin - Vector3i(8, 8, 8), Vector3i(17, 17, 17));
+	read_box.padded(4).downscaled(data.get_block_size()).for_each_cell([&data](Vector3i block_position) {
+		// A loaded block without voxels is generated when it is first edited.
+		const bool inserted = data.try_set_block(block_position, VoxelDataBlock());
+		ZN_TEST_ASSERT(inserted);
+	});
+
+	Ref<VoxelToolLodTerrain> tool(memnew(VoxelToolLodTerrain(terrain)));
+	tool->set_channel(VoxelBuffer::CHANNEL_SDF);
+	tool->set_mode(VoxelTool::MODE_REMOVE);
+	if (at_voxel) {
+		tool->do_sphere_at_voxel(origin, offset, radius);
+	} else {
+		tool->do_sphere(Vector3(origin) + offset, radius);
+	}
+
+	StdVector<uint16_t> values;
+	VoxelSingleValue fallback;
+	fallback.i = 0;
+	read_box.for_each_cell_zxy([&data, &values, fallback](Vector3i position) {
+		values.push_back(data.get_voxel(position, VoxelBuffer::CHANNEL_SDF, fallback).i);
+	});
+	tool.unref();
+	memdelete(terrain);
+	return values;
+}
+
+} // namespace
+
+// Scenario: Craters closer together than single precision can tell apart are different
+void test_voxel_tool_lod_terrain_sphere_at_voxel() {
+	const Vector3i far_origin(6000000, 0, 0);
+	const StdVector<uint16_t> near_offset = sdf_after_sphere(far_origin, Vector3(0.1, 0.5, 0.5), 4.f, true);
+	const StdVector<uint16_t> far_offset = sdf_after_sphere(far_origin, Vector3(0.3, 0.5, 0.5), 4.f, true);
+	ZN_TEST_ASSERT(near_offset != far_offset);
+	// 6,000,000.1 and 6,000,000.2 round to the same float, so only an exact centre tells them apart.
+	const StdVector<uint16_t> same_float = sdf_after_sphere(far_origin, Vector3(0.2, 0.5, 0.5), 4.f, true);
+	ZN_TEST_ASSERT(near_offset != same_float);
+
+	const Vector3i small_origin(16, 16, 16);
+	const StdVector<uint16_t> at_voxel = sdf_after_sphere(small_origin, Vector3(0.1, 0.5, 0.5), 4.f, true);
+	const StdVector<uint16_t> at_centre = sdf_after_sphere(small_origin, Vector3(0.1, 0.5, 0.5), 4.f, false);
+	ZN_TEST_ASSERT(at_voxel == at_centre);
 }
 
 } // namespace zylann::voxel::tests

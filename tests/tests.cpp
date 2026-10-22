@@ -184,6 +184,7 @@ void run_voxel_tests(const testing::TestOptions &options) {
 	VOXEL_TEST(test_voxel_graph_fast_noise_3d_on_sphere_has_no_tie_plane_step);
 	VOXEL_TEST(test_voxel_graph_planet_sites);
 	VOXEL_TEST(test_voxel_graph_planet_roads);
+	VOXEL_TEST(test_voxel_tool_lod_terrain_sphere_at_voxel);
 
 	print_line("------------ Voxel tests end -------------");
 }

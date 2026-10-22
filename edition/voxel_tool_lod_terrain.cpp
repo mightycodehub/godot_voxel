@@ -126,6 +126,46 @@ void VoxelToolLodTerrain::do_sphere(Vector3 center, float radius) {
 	_post_edit(world_box);
 }
 
+void VoxelToolLodTerrain::do_sphere_at_voxel(Vector3i origin, Vector3 offset, float radius) {
+	ZN_PROFILE_SCOPE();
+	ERR_FAIL_COND(_terrain == nullptr);
+
+	ops::DoSphere op;
+	op.shape.center = to_vec3f(offset);
+	op.shape.radius = radius;
+	op.shape.sdf_scale = get_sdf_scale();
+	op.box = ops::get_sdf_sphere_box(to_vec3f(offset), radius);
+	op.box.position += origin;
+	op.box = op.box.clipped(_terrain->get_voxel_bounds());
+	op.mode = static_cast<ops::Mode>(get_mode());
+	op.texture_params = _texture_params;
+	op.blocky_value = _value;
+	op.channel = get_channel();
+	op.strength = get_sdf_strength();
+
+	const Box3i world_box = op.box;
+
+	if (!is_area_editable(world_box)) {
+		ZN_PRINT_WARNING("Area not editable");
+		return;
+	}
+
+	VoxelData &data = _terrain->get_storage();
+
+	data.pre_generate_box(world_box);
+	data.get_blocks_grid(op.blocks, world_box, 0);
+
+	// The origin is made block-local in integers, so a centre far from zero is never rounded to float.
+	const Vector3i origin_in_voxels = op.blocks.get_origin_block_position_in_voxels();
+	op.shape.center = to_vec3f(offset) + to_vec3f(origin - origin_in_voxels);
+	op.box.position -= origin_in_voxels;
+	op.blocks.use_relative_coordinates();
+
+	op();
+
+	_post_edit(world_box);
+}
+
 void VoxelToolLodTerrain::do_hemisphere(Vector3 center, float radius, Vector3 flat_direction, float smoothness) {
 	ZN_PROFILE_SCOPE();
 	ERR_FAIL_COND(_terrain == nullptr);
@@ -600,6 +640,7 @@ void VoxelToolLodTerrain::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_voxel_f_interpolated", "position"), &Self::get_voxel_f_interpolated);
 	ClassDB::bind_method(D_METHOD("separate_floating_chunks", "box", "parent_node"), &Self::separate_floating_chunks);
 	ClassDB::bind_method(D_METHOD("do_sphere_async", "center", "radius"), &Self::do_sphere_async);
+	ClassDB::bind_method(D_METHOD("do_sphere_at_voxel", "origin", "offset", "radius"), &Self::do_sphere_at_voxel);
 #ifdef VOXEL_ENABLE_MESH_SDF
 	ClassDB::bind_method(D_METHOD("stamp_sdf", "mesh_sdf", "transform", "isolevel", "sdf_scale"), &Self::stamp_sdf);
 #endif

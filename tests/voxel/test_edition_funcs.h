@@ -7,6 +7,7 @@ void test_run_blocky_random_tick();
 void test_box_blur();
 void test_discord_soakil_copypaste();
 void test_sdf_hemisphere();
+void test_voxel_tool_lod_terrain_sphere_at_voxel();
 
 } // namespace zylann::voxel::tests
 

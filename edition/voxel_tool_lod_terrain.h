@@ -43,6 +43,7 @@ public:
 	int get_raycast_binary_search_iterations() const;
 	void set_raycast_binary_search_iterations(int iterations);
 	void do_sphere_async(Vector3 center, float radius);
+	void do_sphere_at_voxel(Vector3i origin, Vector3 offset, float radius);
 	void do_hemisphere(Vector3 center, float radius, Vector3 flat_direction, float smoothness);
 	float get_voxel_f_interpolated(Vector3 position) const override;
 
