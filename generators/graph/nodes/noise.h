@@ -513,6 +513,11 @@ void register_noise_nodes(Span<NodeType> types) {
 				ctx.make_error(ZN_TTR("Domain warp is not supported by this node"));
 				return;
 			}
+			if (noise->get_noise_type() == ZN_FastNoiseLite::TYPE_CELLULAR) {
+				// Cellular distance values exceed the [-1, 1] range this node reports.
+				ctx.make_error(ZN_TTR("Cellular noise is not supported by this node"));
+				return;
+			}
 			Params p;
 			p.noise = *noise;
 			ctx.set_params(p);

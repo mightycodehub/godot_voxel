@@ -2752,6 +2752,12 @@ void test_voxel_graph_fast_noise_3d_on_sphere() {
 	ZN_TEST_ASSERT(!shader.compilation.success);
 	ZN_TEST_ASSERT(shader.compilation.node_id == int(n_noise));
 #endif
+
+	noise->set_noise_type(ZN_FastNoiseLite::TYPE_CELLULAR);
+	function->set_node_param(n_noise, 0, noise);
+	const CompilationResult cellular_result = generator->compile(false);
+	ZN_TEST_ASSERT(cellular_result.success == false);
+	ZN_TEST_ASSERT(cellular_result.node_id == int(n_noise));
 }
 
 } // namespace zylann::voxel::tests
