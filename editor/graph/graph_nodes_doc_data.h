@@ -8,7 +8,7 @@ struct Node {
     const char *description;
 };
 
-static const unsigned int COUNT = 60;
+static const unsigned int COUNT = 61;
 static const Node g_data[COUNT] = {
     {"Abs", "Math", "If [code]x[/code] is negative, returns [code]x[/code] as a positive number. Otherwise, returns [code]x[/code]."},
     {"Add", "Ops", "Returns the sum of [code]a[/code] and [code]b[/code]"},
@@ -49,6 +49,7 @@ static const Node g_data[COUNT] = {
     {"OutputSingleTexture", "Output", "Sets the texture index of the current voxel. This is an alternative to using [code]OutputWeight[/code] nodes, if your voxels only have one texture. This is easier to use but does not allow for long gradients. Using this node in combination with [code]OutputWeight[/code] is not supported."},
     {"OutputType", "Output", "Sets the TYPE index of the current voxel. This is for use with [url=VoxelMesherBlocky]VoxelMesherBlocky[/url]. If you use this output, you don't need to use [code]OutputSDF[/code]."},
     {"OutputWeight", "Output", "Sets the value of a specific texture weight for the current voxel. The texture is specified as an index with the [code]layer[/code] parameter. There can only be one output using a given layer index."},
+    {"PlanetSites", "SDF", "Flattens the ground around places on a sphere centered at the origin, such as the sites of a planet: within a site's pad radius of its centre the ground height becomes the site's pad height, and across a rim beyond it the height blends back to the input [code]height[/code] with a smoothstep. Returns the change in ground height the sites make at [code](x, y, z)[/code], to be subtracted from a signed distance. [code]radius[/code] is the sphere's radius and [code]height[/code] the ground height above it before the sites. The [code]sites[/code] parameter holds six numbers per site: the direction of its centre from the origin (x, y, z), the pad radius, the rim width and the pad height above the sphere. Distances from a site are measured over the sphere.\nThe distances are computed in double precision from the exact coordinates, so the result does not lose precision far from the origin. Where no site reaches, the result is exactly 0. Sites overlapping each other are applied in table order. This node does not support GPU generation."},
     {"Pow", "Math", "Returns the result of the power function ([code]x ^ power[/code]). It can be relatively slow."},
     {"Powi", "Math", "Returns the result of the power function ([code]x ^ power[/code]), where the exponent is a constant positive integer. May be faster than [code]Pow[/code]."},
     {"Relay", "Misc", "Pass-through node, allowing to better organize the path of long connections."},

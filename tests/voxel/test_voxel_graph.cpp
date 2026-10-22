@@ -2815,4 +2815,97 @@ void test_voxel_graph_fast_noise_3d_on_sphere_has_no_tie_plane_step() {
 	}
 }
 
+void test_voxel_graph_planet_sites() {
+	const double radius = 6371000.0;
+	const double length = Math::sqrt(0.36 * 0.36 + 0.48 * 0.48 + 0.8 * 0.8);
+	const double c[3] = { 0.36 / length, 0.48 / length, 0.8 / length };
+	const double flat = 30.0;
+	const double rim = 30.0;
+	const double pad_height = 12.5;
+	const double natural = -4.0;
+
+	PackedFloat64Array table;
+	table.push_back(0.36);
+	table.push_back(0.48);
+	table.push_back(0.8);
+	table.push_back(flat);
+	table.push_back(rim);
+	table.push_back(pad_height);
+
+	Ref<VoxelGeneratorGraph> generator;
+	generator.instantiate();
+	Ref<VoxelGraphFunction> function = generator->get_main_function();
+	const uint32_t n_x = function->create_node(VoxelGraphFunction::NODE_INPUT_X);
+	const uint32_t n_y = function->create_node(VoxelGraphFunction::NODE_INPUT_Y);
+	const uint32_t n_z = function->create_node(VoxelGraphFunction::NODE_INPUT_Z);
+	const uint32_t n_sites = function->create_node(VoxelGraphFunction::NODE_PLANET_SITES);
+	const uint32_t n_out = function->create_node(VoxelGraphFunction::NODE_OUTPUT_SDF);
+	function->add_connection(n_x, 0, n_sites, 0);
+	function->add_connection(n_y, 0, n_sites, 1);
+	function->add_connection(n_z, 0, n_sites, 2);
+	function->add_connection(n_sites, 0, n_out, 0);
+	function->set_node_default_input_by_name(n_sites, "radius", radius);
+	function->set_node_default_input_by_name(n_sites, "height", natural);
+	function->set_node_param_by_name(n_sites, "sites", table);
+
+	const CompilationResult result = generator->compile(false);
+	ZN_TEST_ASSERT_MSG(result.success, result.message);
+
+	// Voxels at the centre, inside the pad, across the rim and beyond it, each against the flattening in double.
+	for (const double distance : { 0.0, 20.0, 29.0, 31.0, 40.0, 45.0, 52.5, 59.0, 61.0, 1000.0 }) {
+		const double north[3] = { -c[1] * c[0], 1.0 - c[1] * c[1], -c[1] * c[2] };
+		const double north_length = Math::sqrt(north[0] * north[0] + north[1] * north[1] + north[2] * north[2]);
+		const double sine = distance / radius;
+		const double cosine = Math::sqrt(1.0 - sine * sine);
+		Vector3i voxel;
+		for (int axis = 0; axis < 3; ++axis) {
+			voxel[axis] = int(Math::round((cosine * c[axis] + sine * north[axis] / north_length) * radius));
+		}
+		const double px = voxel.x;
+		const double py = voxel.y;
+		const double pz = voxel.z;
+		const double ax = py * c[2] - pz * c[1];
+		const double ay = pz * c[0] - px * c[2];
+		const double az = px * c[1] - py * c[0];
+		const double d = radius * Math::sqrt((ax * ax + ay * ay + az * az) / (px * px + py * py + pz * pz));
+		const double t = math::clamp((d - flat) / rim, 0.0, 1.0);
+		const double w = 1.0 - t * t * (3.0 - 2.0 * t);
+		const double expected = w * (pad_height - natural);
+		const float obtained = generator->generate_single(voxel, VoxelBuffer::CHANNEL_SDF).f;
+		ZN_TEST_ASSERT(Math::abs(obtained - expected) <= 1e-6);
+		if (d >= flat + rim) {
+			ZN_TEST_ASSERT(obtained == 0.f);
+		}
+	}
+
+	const Vector3i centre(
+			int(Math::round(c[0] * radius)), int(Math::round(c[1] * radius)), int(Math::round(c[2] * radius))
+	);
+	const math::Interval over_site = generator->debug_analyze_range(centre, centre + Vector3i(16, 16, 16), false);
+	ZN_TEST_ASSERT(over_site.min <= 0.f && over_site.max >= float(pad_height - natural));
+	const Vector3i away(int(Math::round(c[0] * radius)) + 1000, centre.y, centre.z);
+	const math::Interval away_range = generator->debug_analyze_range(away, away + Vector3i(16, 16, 16), false);
+	ZN_TEST_ASSERT(away_range.min == 0.f && away_range.max == 0.f);
+
+#ifdef VOXEL_ENABLE_GPU
+	const VoxelGraphFunction::ShaderResult shader = function->get_shader_source();
+	ZN_TEST_ASSERT(!shader.compilation.success);
+	ZN_TEST_ASSERT(shader.compilation.node_id == int(n_sites));
+#endif
+
+	PackedFloat64Array short_table = table;
+	short_table.push_back(1.0);
+	function->set_node_param_by_name(n_sites, "sites", short_table);
+	const CompilationResult short_result = generator->compile(false);
+	ZN_TEST_ASSERT(short_result.success == false);
+	ZN_TEST_ASSERT(short_result.node_id == int(n_sites));
+
+	PackedFloat64Array no_rim = table;
+	no_rim.set(4, 0.0);
+	function->set_node_param_by_name(n_sites, "sites", no_rim);
+	const CompilationResult no_rim_result = generator->compile(false);
+	ZN_TEST_ASSERT(no_rim_result.success == false);
+	ZN_TEST_ASSERT(no_rim_result.node_id == int(n_sites));
+}
+
 } // namespace zylann::voxel::tests

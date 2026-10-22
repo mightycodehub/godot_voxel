@@ -389,6 +389,15 @@ Sets the value of a specific texture weight for the current voxel. The texture i
 
 ## SDF
 
+### PlanetSites
+
+Inputs: `x`, `y`, `z`, `radius`, `height`
+Outputs: `out`
+Parameters: `sites`
+
+Flattens the ground around places on a sphere centered at the origin, such as the sites of a planet: within a site's pad radius of its centre the ground height becomes the site's pad height, and across a rim beyond it the height blends back to the input `height` with a smoothstep. Returns the change in ground height the sites make at `(x, y, z)`, to be subtracted from a signed distance. `radius` is the sphere's radius and `height` the ground height above it before the sites. The `sites` parameter holds six numbers per site: the direction of its centre from the origin (x, y, z), the pad radius, the rim width and the pad height above the sphere. Distances from a site are measured over the sphere.
+The distances are computed in double precision from the exact coordinates, so the result does not lose precision far from the origin. Where no site reaches, the result is exactly 0. Sites overlapping each other are applied in table order. This node does not support GPU generation.
+
 ### SdfBox
 
 Inputs: `x`, `y`, `z`
