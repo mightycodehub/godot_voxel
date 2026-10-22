@@ -107,14 +107,23 @@ void register_sdf_nodes(Span<NodeType> types) {
 			const Runtime::Buffer &z = ctx.get_input(2);
 			const Runtime::Buffer &r = ctx.get_input(3);
 			Runtime::Buffer &out = ctx.get_output(0);
+			// Squares of large coordinates exceed float precision, so the distance is computed in double.
 			if (r.is_constant) {
+				const double radius = r.constant_value;
 				for (uint32_t i = 0; i < out.size; ++i) {
 					out.data[i] =
-							Math::sqrt(squared(x.data[i]) + squared(y.data[i]) + squared(z.data[i])) - r.constant_value;
+							Math::sqrt(
+									squared(double(x.data[i])) + squared(double(y.data[i])) + squared(double(z.data[i]))
+							) -
+							radius;
 				}
 			} else {
 				for (uint32_t i = 0; i < out.size; ++i) {
-					out.data[i] = Math::sqrt(squared(x.data[i]) + squared(y.data[i]) + squared(z.data[i])) - r.data[i];
+					out.data[i] =
+							Math::sqrt(
+									squared(double(x.data[i])) + squared(double(y.data[i])) + squared(double(z.data[i]))
+							) -
+							double(r.data[i]);
 				}
 			}
 		};
@@ -123,7 +132,13 @@ void register_sdf_nodes(Span<NodeType> types) {
 			const Interval y = ctx.get_input(1);
 			const Interval z = ctx.get_input(2);
 			const Interval r = ctx.get_input(3);
-			ctx.set_output(0, get_length(x, y, z) - r);
+			const IntervalT<double> d = get_length(
+												IntervalT<double>(x.min, x.max),
+												IntervalT<double>(y.min, y.max),
+												IntervalT<double>(z.min, z.max)
+										) -
+					IntervalT<double>(r.min, r.max);
+			ctx.set_output(0, Interval(d.min, d.max));
 		};
 		t.shader_gen_func = [](ShaderGenContext &ctx) {
 			ctx.add_format(
