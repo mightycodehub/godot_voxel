@@ -2908,4 +2908,144 @@ void test_voxel_graph_planet_sites() {
 	ZN_TEST_ASSERT(no_rim_result.node_id == int(n_sites));
 }
 
+void test_voxel_graph_planet_roads() {
+	const double radius = 1000000.0;
+	const double length = Math::sqrt(0.36 * 0.36 + 0.48 * 0.48 + 0.8 * 0.8);
+	const double a[3] = { 0.36 / length, 0.48 / length, 0.8 / length };
+	const double north_raw[3] = { -a[1] * a[0], 1.0 - a[1] * a[1], -a[1] * a[2] };
+	const double north_length =
+			Math::sqrt(north_raw[0] * north_raw[0] + north_raw[1] * north_raw[1] + north_raw[2] * north_raw[2]);
+	const double north[3] = { north_raw[0] / north_length, north_raw[1] / north_length, north_raw[2] / north_length };
+	const double east[3] = { north[1] * a[2] - north[2] * a[1],
+							 north[2] * a[0] - north[0] * a[2],
+							 north[0] * a[1] - north[1] * a[0] };
+	const double road_length = 2000.0;
+	const double b[3] = { Math::cos(road_length / radius) * a[0] + Math::sin(road_length / radius) * north[0],
+						  Math::cos(road_length / radius) * a[1] + Math::sin(road_length / radius) * north[1],
+						  Math::cos(road_length / radius) * a[2] + Math::sin(road_length / radius) * north[2] };
+	const double heights[3] = { 1.0, 5.0, 2.0 };
+	const double natural = -4.0;
+
+	PackedFloat64Array roads;
+	roads.push_back(2.0);
+	for (const double value : a) {
+		roads.push_back(value);
+	}
+	for (const double value : b) {
+		roads.push_back(value);
+	}
+	roads.push_back(6.0 / radius);
+	roads.push_back(20.0 / radius);
+	for (const double distance : { 60.0, 1000.0, 1940.0 }) {
+		roads.push_back(Math::tan(distance / (2.0 * radius)));
+	}
+	for (const double height : heights) {
+		roads.push_back(height);
+	}
+	PackedFloat64Array sites;
+	for (const double *centre : { a, b }) {
+		for (int axis = 0; axis < 3; ++axis) {
+			sites.push_back(centre[axis]);
+		}
+		sites.push_back(30.0);
+		sites.push_back(30.0);
+		sites.push_back(0.0);
+	}
+
+	Ref<VoxelGeneratorGraph> generator;
+	generator.instantiate();
+	Ref<VoxelGraphFunction> function = generator->get_main_function();
+	const uint32_t n_x = function->create_node(VoxelGraphFunction::NODE_INPUT_X);
+	const uint32_t n_y = function->create_node(VoxelGraphFunction::NODE_INPUT_Y);
+	const uint32_t n_z = function->create_node(VoxelGraphFunction::NODE_INPUT_Z);
+	const uint32_t n_roads = function->create_node(VoxelGraphFunction::NODE_PLANET_ROADS);
+	const uint32_t n_out = function->create_node(VoxelGraphFunction::NODE_OUTPUT_SDF);
+	function->add_connection(n_x, 0, n_roads, 0);
+	function->add_connection(n_y, 0, n_roads, 1);
+	function->add_connection(n_z, 0, n_roads, 2);
+	function->add_connection(n_roads, 0, n_out, 0);
+	function->set_node_default_input_by_name(n_roads, "radius", radius);
+	function->set_node_default_input_by_name(n_roads, "height", natural);
+	function->set_node_param_by_name(n_roads, "roads", roads);
+	function->set_node_param_by_name(n_roads, "sites", sites);
+
+	const CompilationResult result = generator->compile(false);
+	ZN_TEST_ASSERT_MSG(result.success, result.message);
+
+	// Voxels at the surface, `along` metres from the first site and `across` metres east of the centre line.
+	const auto voxel_at = [&](double along, double across) {
+		const double sine = along / radius;
+		const double cosine = Math::sqrt(1.0 - sine * sine);
+		Vector3i voxel;
+		for (int axis = 0; axis < 3; ++axis) {
+			const double on_line = cosine * a[axis] + sine * north[axis];
+			voxel[axis] = int(Math::round((on_line + across / radius * east[axis]) * radius));
+		}
+		return voxel;
+	};
+	const auto across_of = [&](const Vector3i voxel) {
+		const double px = voxel.x;
+		const double py = voxel.y;
+		const double pz = voxel.z;
+		const double q = px * east[0] + py * east[1] + pz * east[2];
+		return radius * Math::abs(q) / Math::sqrt(px * px + py * py + pz * pz);
+	};
+
+	// The middle step is higher than both neighbours, so the road is level there at its height.
+	const float on_road = generator->generate_single(voxel_at(1000.0, 0.0), VoxelBuffer::CHANNEL_SDF).f;
+	ZN_TEST_ASSERT(Math::abs(on_road - (heights[1] - natural)) <= 1e-4);
+	const float on_road_edge = generator->generate_single(voxel_at(1000.0, 5.0), VoxelBuffer::CHANNEL_SDF).f;
+	ZN_TEST_ASSERT(Math::abs(on_road_edge - (heights[1] - natural)) <= 1e-4);
+
+	const Vector3i on_shoulder = voxel_at(1000.0, 16.0);
+	const double u = (across_of(on_shoulder) - 6.0) / 20.0;
+	const double w = 1.0 - u * u * (3.0 - 2.0 * u);
+	const float shoulder = generator->generate_single(on_shoulder, VoxelBuffer::CHANNEL_SDF).f;
+	ZN_TEST_ASSERT(Math::abs(shoulder - w * (heights[1] - natural)) <= 1e-4);
+
+	for (const Vector3i voxel : { voxel_at(1000.0, 30.0),
+								  voxel_at(1000.0, -30.0),
+								  voxel_at(0.0, 0.0),
+								  voxel_at(50.0, 0.0),
+								  voxel_at(1955.0, 0.0),
+								  voxel_at(-40.0, 0.0) }) {
+		ZN_TEST_ASSERT(generator->generate_single(voxel, VoxelBuffer::CHANNEL_SDF).f == 0.f);
+	}
+
+	const Vector3i middle = voxel_at(1000.0, 0.0);
+	const math::Interval over_road = generator->debug_analyze_range(middle, middle + Vector3i(16, 16, 16), false);
+	ZN_TEST_ASSERT(over_road.min <= 0.f && over_road.max >= float(heights[1] - natural));
+	const Vector3i away = voxel_at(1000.0, 1000.0);
+	const math::Interval away_range = generator->debug_analyze_range(away, away + Vector3i(16, 16, 16), false);
+	ZN_TEST_ASSERT(away_range.min == 0.f && away_range.max == 0.f);
+
+#ifdef VOXEL_ENABLE_GPU
+	const VoxelGraphFunction::ShaderResult shader = function->get_shader_source();
+	ZN_TEST_ASSERT(!shader.compilation.success);
+	ZN_TEST_ASSERT(shader.compilation.node_id == int(n_roads));
+#endif
+
+	PackedFloat64Array no_steps = roads;
+	no_steps.set(0, 0.0);
+	function->set_node_param_by_name(n_roads, "roads", no_steps);
+	const CompilationResult no_steps_result = generator->compile(false);
+	ZN_TEST_ASSERT(no_steps_result.success == false);
+	ZN_TEST_ASSERT(no_steps_result.node_id == int(n_roads));
+
+	PackedFloat64Array unordered = roads;
+	unordered.set(10, roads[9]);
+	function->set_node_param_by_name(n_roads, "roads", unordered);
+	const CompilationResult unordered_result = generator->compile(false);
+	ZN_TEST_ASSERT(unordered_result.success == false);
+	ZN_TEST_ASSERT(unordered_result.node_id == int(n_roads));
+
+	PackedFloat64Array short_sites = sites;
+	short_sites.push_back(1.0);
+	function->set_node_param_by_name(n_roads, "roads", roads);
+	function->set_node_param_by_name(n_roads, "sites", short_sites);
+	const CompilationResult short_result = generator->compile(false);
+	ZN_TEST_ASSERT(short_result.success == false);
+	ZN_TEST_ASSERT(short_result.node_id == int(n_roads));
+}
+
 } // namespace zylann::voxel::tests

@@ -100,6 +100,7 @@ public:
 		NODE_SPOTS_3D,
 		NODE_FAST_NOISE_3D_ON_SPHERE,
 		NODE_PLANET_SITES,
+		NODE_PLANET_ROADS,
 
 	// Optional features down (to avoid diffs in docs when building both versions)
 	// Keep in mind this enum's values should not be used in persistent context (saves)

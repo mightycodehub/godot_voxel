@@ -445,11 +445,13 @@
 		</constant>
 		<constant name="NODE_PLANET_SITES" value="58" enum="NodeTypeID">
 		</constant>
-		<constant name="NODE_TYPE_COUNT" value="61" enum="NodeTypeID">
+		<constant name="NODE_PLANET_ROADS" value="59" enum="NodeTypeID">
 		</constant>
-		<constant name="NODE_FAST_NOISE_2_2D" value="59" enum="NodeTypeID">
+		<constant name="NODE_TYPE_COUNT" value="62" enum="NodeTypeID">
 		</constant>
-		<constant name="NODE_FAST_NOISE_2_3D" value="60" enum="NodeTypeID">
+		<constant name="NODE_FAST_NOISE_2_2D" value="60" enum="NodeTypeID">
+		</constant>
+		<constant name="NODE_FAST_NOISE_2_3D" value="61" enum="NodeTypeID">
 		</constant>
 	</constants>
 </class>

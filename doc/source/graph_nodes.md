@@ -389,6 +389,15 @@ Sets the value of a specific texture weight for the current voxel. The texture i
 
 ## SDF
 
+### PlanetRoads
+
+Inputs: `x`, `y`, `z`, `radius`, `height`
+Outputs: `out`
+Parameters: `roads`, `sites`
+
+Flattens the ground along roads on a sphere centered at the origin, such as the roads between the sites of a planet. Each road follows the shorter great-circle arc between two directions, is level across its width, blends into the input `height` over a shoulder on each side with a smoothstep, and is rounded around each end. Along the road its height follows a monotone cubic curve through its step heights. Where roads overlap their heights are blended by weight, in any order. Returns the change in ground height the roads make at `(x, y, z)`, to be subtracted from a signed distance. `radius` is the sphere's radius and `height` the ground height above it before the roads. The `roads` parameter holds one record per road, `11 + 2 K` numbers long: the step count K, the directions of the two ends (x, y, z each), the half width and the shoulder width as fractions of the radius, the K + 1 step boundaries as tangents of half the angle from the first end, increasing, and the K + 1 step heights above the sphere. The `sites` parameter is the site table of `PlanetSites`, six numbers per site; no road changes the ground within a site's pad and rim, and each road fades in over its shoulder width beyond them.
+Distances are computed in double precision from the exact coordinates and the direction alone, without trigonometric functions, so the result does not lose precision far from the origin. Where no road reaches, the result is exactly 0. This node does not support GPU generation.
+
 ### PlanetSites
 
 Inputs: `x`, `y`, `z`, `radius`, `height`

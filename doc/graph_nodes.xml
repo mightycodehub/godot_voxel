@@ -336,6 +336,20 @@
 			Sets the value of a specific texture weight for the current voxel. The texture is specified as an index with the [code]layer[/code] parameter. There can only be one output using a given layer index.
 		</description>
 	</node>
+	<node name="PlanetRoads" category="SDF">
+		<input name="x" default_value="0"/>
+		<input name="y" default_value="0"/>
+		<input name="z" default_value="0"/>
+		<input name="radius" default_value="1"/>
+		<input name="height" default_value="0"/>
+		<output name="out"/>
+		<parameter name="roads" type="PackedFloat64Array" default_value="[]"/>
+		<parameter name="sites" type="PackedFloat64Array" default_value="[]"/>
+		<description>
+			Flattens the ground along roads on a sphere centered at the origin, such as the roads between the sites of a planet. Each road follows the shorter great-circle arc between two directions, is level across its width, blends into the input [code]height[/code] over a shoulder on each side with a smoothstep, and is rounded around each end. Along the road its height follows a monotone cubic curve through its step heights. Where roads overlap their heights are blended by weight, in any order. Returns the change in ground height the roads make at [code](x, y, z)[/code], to be subtracted from a signed distance. [code]radius[/code] is the sphere's radius and [code]height[/code] the ground height above it before the roads. The [code]roads[/code] parameter holds one record per road, [code]11 + 2 K[/code] numbers long: the step count K, the directions of the two ends (x, y, z each), the half width and the shoulder width as fractions of the radius, the K + 1 step boundaries as tangents of half the angle from the first end, increasing, and the K + 1 step heights above the sphere. The [code]sites[/code] parameter is the site table of [code]PlanetSites[/code], six numbers per site; no road changes the ground within a site's pad and rim, and each road fades in over its shoulder width beyond them.
+			Distances are computed in double precision from the exact coordinates and the direction alone, without trigonometric functions, so the result does not lose precision far from the origin. Where no road reaches, the result is exactly 0. This node does not support GPU generation.
+		</description>
+	</node>
 	<node name="PlanetSites" category="SDF">
 		<input name="x" default_value="0"/>
 		<input name="y" default_value="0"/>
