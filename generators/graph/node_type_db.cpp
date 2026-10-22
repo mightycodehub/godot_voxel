@@ -111,6 +111,7 @@ NodeTypeDB::NodeTypeDB() {
 
 				case Variant::OBJECT:
 				case Variant::STRING:
+				case Variant::PACKED_FLOAT64_ARRAY:
 					break;
 
 				default:
