@@ -159,6 +159,18 @@
 			Note: this node might be a little faster than [graph_node Noise3D].
 		</description>
 	</node>
+	<node name="FastNoise3DOnSphere" category="Noise">
+		<input name="x" default_value="0"/>
+		<input name="y" default_value="0"/>
+		<input name="z" default_value="0"/>
+		<input name="radius" default_value="1"/>
+		<output name="out"/>
+		<parameter name="noise" type="Object" default_value="null"/>
+		<description>
+			Returns computation of 3D noise using the FastNoiseLite library, at the point where the line from the origin through [code](x, y, z)[/code] meets a sphere of the given [code]radius[/code] centered on the origin. The noise therefore only depends on the direction from the origin, and can be used as a height map on a planet. The [code]noise[/code] parameter is specified with an instance of the [ZN_FastNoiseLite] resource.
+			The projection and the noise are computed in double precision, so the result does not lose precision far from the origin. At the origin, the noise is sampled at the origin. Domain warp is not supported. This node does not support GPU generation.
+		</description>
+	</node>
 	<node name="FastNoiseGradient2D" category="Noise">
 		<input name="x" default_value="0"/>
 		<input name="y" default_value="0"/>

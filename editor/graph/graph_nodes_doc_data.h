@@ -8,7 +8,7 @@ struct Node {
     const char *description;
 };
 
-static const unsigned int COUNT = 59;
+static const unsigned int COUNT = 60;
 static const Node g_data[COUNT] = {
     {"Abs", "Math", "If [code]x[/code] is negative, returns [code]x[/code] as a positive number. Otherwise, returns [code]x[/code]."},
     {"Add", "Ops", "Returns the sum of [code]a[/code] and [code]b[/code]"},
@@ -27,6 +27,7 @@ static const Node g_data[COUNT] = {
     {"FastNoise2_2D", "Noise", "Returns computation of 2D SIMD noise at coordinates [code](x, y)[/code] using the FastNoise2 library. The `noise` parameter is specified with an instance of the [url=FastNoise2]FastNoise2[/url] resource. This is the fastest noise currently supported."},
     {"FastNoise2_3D", "Noise", "Returns computation of 3D SIMD noise at coordinates [code](x, y, z)[/code] using the FastNoise2 library. The [code]noise[/code] parameter is specified with an instance of the [url=FastNoise2]FastNoise2[/url] resource. This is the fastest noise currently supported."},
     {"FastNoise3D", "Noise", "Returns computation of 3D noise at coordinates [code](x, y, z)[/code] using the FastNoiseLite library. The [code]noise[/code] parameter is specified with an instance of the [url=ZN_FastNoiseLite]ZN_FastNoiseLite[/url] resource.\nNote: this node might be a little faster than [code]Noise3D[/code]."},
+    {"FastNoise3DOnSphere", "Noise", "Returns computation of 3D noise using the FastNoiseLite library, at the point where the line from the origin through [code](x, y, z)[/code] meets a sphere of the given [code]radius[/code] centered on the origin. The noise therefore only depends on the direction from the origin, and can be used as a height map on a planet. The [code]noise[/code] parameter is specified with an instance of the [url=ZN_FastNoiseLite]ZN_FastNoiseLite[/url] resource.\nThe projection and the noise are computed in double precision, so the result does not lose precision far from the origin. At the origin, the noise is sampled at the origin. Domain warp is not supported. This node does not support GPU generation."},
     {"FastNoiseGradient2D", "Noise", "Warps 2D coordinates [code](x, y)[/code] using a noise gradient from the FastNoiseLite library. The [code]noise[/code] parameter is specified with an instance of the [url=FastNoiseLiteGradient]FastNoiseLiteGradient[/url] resource."},
     {"FastNoiseGradient3D", "Noise", "Warps 3D coordinates [code](x, y, z)[/code] using a noise gradient from the FastNoiseLite library. The [code]noise[/code] parameter is specified with an instance of the [url=FastNoiseLiteGradient]FastNoiseLiteGradient[/url] resource."},
     {"Floor", "Math", "Returns the result of [code]floor(x)[/code], the nearest integer that is equal or lower to [code]x[/code]."},

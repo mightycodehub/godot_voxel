@@ -2699,4 +2699,59 @@ void test_voxel_graph_get_io_indices() {
 	}
 }
 
+// Scenario: The relief is the noise at the voxel's projection onto the sphere
+void test_voxel_graph_fast_noise_3d_on_sphere() {
+	const double radius = 6371000.0;
+
+	Ref<ZN_FastNoiseLite> noise;
+	noise.instantiate();
+	noise->set_noise_type(ZN_FastNoiseLite::TYPE_OPEN_SIMPLEX_2);
+	noise->set_fractal_type(ZN_FastNoiseLite::FRACTAL_FBM);
+	noise->set_fractal_octaves(5);
+	noise->set_period(2000.f);
+	noise->set_seed(1);
+
+	Ref<VoxelGeneratorGraph> generator;
+	generator.instantiate();
+	Ref<VoxelGraphFunction> function = generator->get_main_function();
+	const uint32_t n_x = function->create_node(VoxelGraphFunction::NODE_INPUT_X);
+	const uint32_t n_y = function->create_node(VoxelGraphFunction::NODE_INPUT_Y);
+	const uint32_t n_z = function->create_node(VoxelGraphFunction::NODE_INPUT_Z);
+	const uint32_t n_noise = function->create_node(VoxelGraphFunction::NODE_FAST_NOISE_3D_ON_SPHERE);
+	const uint32_t n_out = function->create_node(VoxelGraphFunction::NODE_OUTPUT_SDF);
+	function->add_connection(n_x, 0, n_noise, 0);
+	function->add_connection(n_y, 0, n_noise, 1);
+	function->add_connection(n_z, 0, n_noise, 2);
+	function->add_connection(n_noise, 0, n_out, 0);
+	function->set_node_default_input_by_name(n_noise, "radius", radius);
+	function->set_node_param(n_noise, 0, noise);
+
+	const CompilationResult result = generator->compile(false);
+	ZN_TEST_ASSERT_MSG(result.success, result.message);
+
+	const Vector3i voxels[] = {
+		Vector3i(1678129, 3356258, 5034387), Vector3i(-3290154, 1096718, 5483590),
+		Vector3i(2840151, -710038, 4970265), Vector3i(6371000, 0, 0),
+		Vector3i(-12, -6371040, 7),			 Vector3i(1000003, -2999977, -5530011),
+		Vector3i(4504954, 4504954, 1),		 Vector3i(-3678278, -3678278, -3678278),
+	};
+
+	const fast_noise_lite::FastNoiseLite &fn = noise->get_noise_internal();
+	for (const Vector3i voxel : voxels) {
+		const double x = voxel.x;
+		const double y = voxel.y;
+		const double z = voxel.z;
+		const double length = Math::sqrt(x * x + y * y + z * z);
+		const double expected = fn.GetNoise(x / length * radius, y / length * radius, z / length * radius);
+		const float obtained = generator->generate_single(voxel, VoxelBuffer::CHANNEL_SDF).f;
+		ZN_TEST_ASSERT(Math::abs(obtained - expected) <= 1e-6);
+	}
+
+#ifdef VOXEL_ENABLE_GPU
+	const VoxelGraphFunction::ShaderResult shader = function->get_shader_source();
+	ZN_TEST_ASSERT(!shader.compilation.success);
+	ZN_TEST_ASSERT(shader.compilation.node_id == int(n_noise));
+#endif
+}
+
 } // namespace zylann::voxel::tests

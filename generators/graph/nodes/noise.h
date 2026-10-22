@@ -484,6 +484,67 @@ void register_noise_nodes(Span<NodeType> types) {
 	}
 	{
 		struct Params {
+			const ZN_FastNoiseLite *noise;
+		};
+
+		NodeType &t = types[VoxelGraphFunction::NODE_FAST_NOISE_3D_ON_SPHERE];
+		t.name = "FastNoise3DOnSphere";
+		t.category = CATEGORY_GENERATE;
+		t.inputs.push_back(NodeType::Port("x", 0.f, VoxelGraphFunction::AUTO_CONNECT_X));
+		t.inputs.push_back(NodeType::Port("y", 0.f, VoxelGraphFunction::AUTO_CONNECT_Y));
+		t.inputs.push_back(NodeType::Port("z", 0.f, VoxelGraphFunction::AUTO_CONNECT_Z));
+		t.inputs.push_back(NodeType::Port("radius", 1.f, VoxelGraphFunction::AUTO_CONNECT_NONE, false));
+		t.outputs.push_back(NodeType::Port("out"));
+		t.params.push_back(
+				NodeType::Param(
+						"noise", ZN_FastNoiseLite::get_class_static(), &create_resource_to_variant<ZN_FastNoiseLite>
+				)
+		);
+
+		t.compile_func = [](CompileContext &ctx) {
+			Ref<ZN_FastNoiseLite> noise = ctx.get_param(0);
+			if (noise.is_null()) {
+				ctx.make_error(
+						String(ZN_TTR("{0} instance is null")).format(varray(ZN_FastNoiseLite::get_class_static()))
+				);
+				return;
+			}
+			if (noise->get_warp_noise().is_valid()) {
+				ctx.make_error(ZN_TTR("Domain warp is not supported by this node"));
+				return;
+			}
+			Params p;
+			p.noise = *noise;
+			ctx.set_params(p);
+		};
+
+		t.process_buffer_func = [](Runtime::ProcessBufferContext &ctx) {
+			ZN_PROFILE_SCOPE_NAMED("NODE_FAST_NOISE_3D_ON_SPHERE");
+			const Runtime::Buffer &x = ctx.get_input(0);
+			const Runtime::Buffer &y = ctx.get_input(1);
+			const Runtime::Buffer &z = ctx.get_input(2);
+			const Runtime::Buffer &r = ctx.get_input(3);
+			Runtime::Buffer &out = ctx.get_output(0);
+			const Params p = ctx.get_params<Params>();
+			const ::fast_noise_lite::FastNoiseLite &fn = p.noise->get_noise_internal();
+			for (uint32_t i = 0; i < out.size; ++i) {
+				const double px = x.data[i];
+				const double py = y.data[i];
+				const double pz = z.data[i];
+				const double radius = r.is_constant ? r.constant_value : r.data[i];
+				const double len = Math::sqrt(px * px + py * py + pz * pz);
+				const double k = len > 0.0 ? radius / len : 0.0;
+				out.data[i] = fn.GetNoise(px * k, py * k, pz * k);
+			}
+		};
+
+		t.range_analysis_func = [](Runtime::RangeAnalysisContext &ctx) {
+			// Evaluated in double; a float range estimate could narrow to a constant the node never produces.
+			ctx.set_output(0, Interval(-1.f, 1.f));
+		};
+	}
+	{
+		struct Params {
 			const ZN_FastNoiseLiteGradient *noise;
 		};
 

@@ -266,6 +266,15 @@ Parameters: `noise`
 Returns computation of 3D noise at coordinates `(x, y, z)` using the FastNoiseLite library. The `noise` parameter is specified with an instance of the [ZN_FastNoiseLite](api/ZN_FastNoiseLite.md) resource.
 Note: this node might be a little faster than `Noise3D`.
 
+### FastNoise3DOnSphere
+
+Inputs: `x`, `y`, `z`, `radius`
+Outputs: `out`
+Parameters: `noise`
+
+Returns computation of 3D noise using the FastNoiseLite library, at the point where the line from the origin through `(x, y, z)` meets a sphere of the given `radius` centered on the origin. The noise therefore only depends on the direction from the origin, and can be used as a height map on a planet. The `noise` parameter is specified with an instance of the [ZN_FastNoiseLite](api/ZN_FastNoiseLite.md) resource.
+The projection and the noise are computed in double precision, so the result does not lose precision far from the origin. At the origin, the noise is sampled at the origin. Domain warp is not supported. This node does not support GPU generation.
+
 ### FastNoiseGradient2D
 
 Inputs: `x`, `y`
