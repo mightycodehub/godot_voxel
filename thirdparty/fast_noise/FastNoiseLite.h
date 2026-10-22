@@ -1092,7 +1092,7 @@ public:
         k *= PrimeZ;
 
         float value = 0;
-        float a = (0.6f - x0 * x0) - (y0 * y0 + z0 * z0);
+        float a = (0.5f - x0 * x0) - (y0 * y0 + z0 * z0);
 
         for (int l = 0; ; l++)
         {
@@ -1156,7 +1156,7 @@ public:
             seed = ~seed;
         }
 
-        return value * 32.69428253173828125f;
+        return value * 74.2f;
     }
 
 

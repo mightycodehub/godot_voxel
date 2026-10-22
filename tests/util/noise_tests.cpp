@@ -246,10 +246,8 @@ void test_noises() {
 	fn.SetFractalType(fast_noise_lite::FastNoiseLite::FractalType_None);
 	fn.SetFrequency(1.f);
 
-	// According to OpenSimplex2 author, the 3D version is supposed to have a max derivative around 4.23718
-	// https://www.wolframalpha.com/input/?i=max+d%2Fdx+32.69428253173828125+*+x+*+%28%280.6-x%5E2%29%5E4%29+from+-0.6+to+0.6
-	// But empiric measures have shown it around 8. Discontinuities do exist in this noise though,
-	// which makes this measuring harder (and the reason why multiple step sizes are used)
+	// Max derivative of one 3D OpenSimplex2 kernel, 74.2 * 0.5^3 * 0.5:
+	// https://www.wolframalpha.com/input/?i=max+d%2Fdx+74.2+*+x+*+%28%280.5-x%5E2%29%5E4%29+from+-0.5+to+0.5
 
 	fn.SetNoiseType(fast_noise_lite::FastNoiseLite::NoiseType_OpenSimplex2);
 	test_fnl_noise(fn, "FNL_OpenSimplex2", TEST_MIN_MAX | TEST_DERIVATIVES);

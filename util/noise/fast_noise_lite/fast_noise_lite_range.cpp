@@ -193,10 +193,8 @@ Interval fnl_single_opensimplex2_3d(
 		Interval p_y,
 		Interval p_z
 ) {
-	// According to OpenSimplex2 author, the 3D version is supposed to have a max derivative around 4.23718
-	// https://www.wolframalpha.com/input/?i=max+d%2Fdx+32.69428253173828125+*+x+*+%28%280.6-x%5E2%29%5E4%29+from+-0.6+to+0.6
-	// But empiric measures have shown it around 8. Discontinuities do exist in this noise though,
-	// which makes this measuring harder
+	// Max derivative of one kernel, 74.2 * 0.5^3 * 0.5:
+	// https://www.wolframalpha.com/input/?i=max+d%2Fdx+74.2+*+x+*+%28%280.5-x%5E2%29%5E4%29+from+-0.5+to+0.5
 	return get_noise_range_3d(
 			[&fn, seed](real_t x, real_t y, real_t z) { //
 				return fn.SingleOpenSimplex2(seed, x, y, z);
@@ -204,7 +202,7 @@ Interval fnl_single_opensimplex2_3d(
 			p_x,
 			p_y,
 			p_z,
-			4.23718f
+			4.6375f
 	);
 }
 

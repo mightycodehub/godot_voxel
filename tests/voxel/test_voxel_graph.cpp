@@ -2760,4 +2760,59 @@ void test_voxel_graph_fast_noise_3d_on_sphere() {
 	ZN_TEST_ASSERT(cellular_result.node_id == int(n_noise));
 }
 
+void test_voxel_graph_fast_noise_3d_on_sphere_has_no_tie_plane_step() {
+	const double radius = 6371000.0;
+	const double half = Math::sqrt(0.5);
+
+	struct Layer {
+		float period;
+		double amplitude;
+		int octaves;
+		int seed;
+	};
+	const Layer layers[] = { { 500000.f, 3000.0, 4, 0 }, { 2000.f, 150.0, 5, 1 } };
+
+	for (const Layer &layer : layers) {
+		Ref<ZN_FastNoiseLite> noise;
+		noise.instantiate();
+		noise->set_noise_type(ZN_FastNoiseLite::TYPE_OPEN_SIMPLEX_2);
+		noise->set_fractal_type(ZN_FastNoiseLite::FRACTAL_FBM);
+		noise->set_fractal_octaves(layer.octaves);
+		noise->set_period(layer.period);
+		noise->set_seed(layer.seed);
+		const fast_noise_lite::FastNoiseLite &fn = noise->get_noise_internal();
+
+		// Transects across the plane x = y at the point (0, 0, radius) and 100 km along that plane from it.
+		for (const double along : { 0.0, 100000.0 }) {
+			double previous = 0.0;
+			for (int step = 0; step <= 10000; ++step) {
+				const double across = step * 0.0001 - 0.5;
+				const double x = (along - across) * half;
+				const double y = (along + across) * half;
+				const double z = radius;
+				const double scale = radius / Math::sqrt(x * x + y * y + z * z);
+				const double relief = fn.GetNoise(x * scale, y * scale, z * scale) * layer.amplitude;
+				if (step > 0) {
+					ZN_TEST_ASSERT(Math::abs(relief - previous) <= 0.001);
+				}
+				previous = relief;
+			}
+		}
+	}
+
+	fast_noise_lite::FastNoiseLite single;
+	single.SetNoiseType(fast_noise_lite::FastNoiseLite::NoiseType_OpenSimplex2);
+	single.SetFractalType(fast_noise_lite::FastNoiseLite::FractalType_None);
+	single.SetFrequency(1.f);
+	RandomPCG rng;
+	rng.seed(131183);
+	for (int i = 0; i < 5000; ++i) {
+		const double x = (rng.randf() * 2.0 - 1.0) * 1000.0;
+		const double y = (rng.randf() * 2.0 - 1.0) * 1000.0;
+		const double z = (rng.randf() * 2.0 - 1.0) * 1000.0;
+		const float value = single.GetNoise(x, y, z);
+		ZN_TEST_ASSERT(value >= -1.f && value <= 1.f);
+	}
+}
+
 } // namespace zylann::voxel::tests

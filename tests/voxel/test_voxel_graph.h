@@ -48,6 +48,7 @@ void test_voxel_graph_broad_block();
 void test_voxel_graph_set_default_input_by_name();
 void test_voxel_graph_get_io_indices();
 void test_voxel_graph_fast_noise_3d_on_sphere();
+void test_voxel_graph_fast_noise_3d_on_sphere_has_no_tie_plane_step();
 
 } // namespace zylann::voxel::tests
 
